@@ -46,13 +46,15 @@ async def profile_csv(file: UploadFile = File(...)):
     for col in df.columns:
         series = df[col]
 
-        if pd.api.types.is_numeric_dtype(series):
+        numeric_series = pd.to_numeric(series, errors="coerce")
+
+        if numeric_series.notna().sum() > 0:
             profile[col] = {
                 "type": "numeric",
-                "nulls": int(series.isna().sum()),
-                "min": float(series.min()),
-                "max": float(series.max()),
-                "mean": float(series.mean())
+                "nulls": int(numeric_series.isna().sum()),
+                "min": float(numeric_series.min()),
+                "max": float(numeric_series.max()),
+                "mean": float(numeric_series.mean())
             }
         else:
             profile[col] = {
