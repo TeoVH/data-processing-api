@@ -49,12 +49,16 @@ async def profile_csv(file: UploadFile = File(...)):
         numeric_series = pd.to_numeric(series, errors="coerce")
 
         if numeric_series.notna().sum() > 0:
+            mean_value = numeric_series.mean()
+            min_value = numeric_series.min()
+            max_value = numeric_series.max()
+
             profile[col] = {
                 "type": "numeric",
                 "nulls": int(numeric_series.isna().sum()),
-                "min": float(numeric_series.min()),
-                "max": float(numeric_series.max()),
-                "mean": float(numeric_series.mean())
+                "min": float(min_value) if not pd.isna(min_value) else None,
+                "max": float(max_value) if not pd.isna(max_value) else None,
+                "mean": float(mean_value) if not pd.isna(mean_value) else None
             }
         else:
             profile[col] = {
