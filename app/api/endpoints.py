@@ -80,3 +80,37 @@ async def profile_csv(file: UploadFile = File(...)):
         "rows": int(len(df)),
         "columns": profile
     }
+
+@router.post("/prepare-dataset")
+async def prepare_dataset(file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=415, detail="Only CSV files are supported")
+
+    try:
+        df = pd.read_csv(file.file)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid CSV file")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
+
+    # 1️. Seleccionar columnas numéricas (con coerción)
+    numeric_df = df.apply(pd.to_numeric, errors="coerce")
+
+    # 2️. Eliminar columnas completamente nulas
+    numeric_df = numeric_df.dropna(axis=1, how="all")
+
+    if numeric_df.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="No numeric columns available for ML"
+        )
+
+    # 3. Imputación de nulos con la media
+    numeric_df = numeric_df.fillna(numeric_df.mean())
+
+    return {
+        "features": list(numeric_df.columns),
+        "rows": int(len(numeric_df)),
+        "status": "dataset ready for ML"
+    }
