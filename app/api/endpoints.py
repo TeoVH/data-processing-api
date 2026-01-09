@@ -114,3 +114,71 @@ async def prepare_dataset(file: UploadFile = File(...)):
         "rows": int(len(numeric_df)),
         "status": "dataset ready for ML"
     }
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+import joblib
+import os
+
+@router.post("/train-model")
+async def train_model(file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=415, detail="Only CSV files are supported")
+
+    try:
+        df = pd.read_csv(file.file)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid CSV file")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
+
+    # Convertir todo a numérico
+    numeric_df = df.apply(pd.to_numeric, errors="coerce")
+
+    if "Population" not in numeric_df.columns:
+        raise HTTPException(
+            status_code=400,
+            detail="Target column 'Population' not found"
+        )
+
+    # Separar features y target
+    X = numeric_df.drop(columns=["Population"])
+    y = numeric_df["Population"]
+
+    # Limpiar columnas inválidas
+    X = X.dropna(axis=1, how="all")
+    X = X.fillna(X.mean())
+    y = y.fillna(y.mean())
+
+    if X.empty:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid features for training"
+        )
+
+    # Split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Entrenar modelo
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    # Evaluar
+    predictions = model.predict(X_test)
+    score = r2_score(y_test, predictions)
+
+    # Guardar modelo
+    os.makedirs("models", exist_ok=True)
+    joblib.dump(model, "models/linear_regression.joblib")
+
+    return {
+        "model": "LinearRegression",
+        "features": list(X.columns),
+        "rows": int(len(df)),
+        "r2_score": round(float(score), 3),
+        "status": "model trained successfully"
+    }
