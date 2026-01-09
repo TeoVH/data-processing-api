@@ -169,7 +169,11 @@ async def train_model(file: UploadFile = File(...)):
 
     # Evaluar
     predictions = model.predict(X_test)
-    score = r2_score(y_test, predictions)
+
+    if len(y_test) < 2:
+        score = None
+    else:
+        score = r2_score(y_test, predictions)
 
     # Guardar modelo
     os.makedirs("models", exist_ok=True)
@@ -179,6 +183,6 @@ async def train_model(file: UploadFile = File(...)):
         "model": "LinearRegression",
         "features": list(X.columns),
         "rows": int(len(df)),
-        "r2_score": round(float(score), 3),
+        "r2_score": round(float(score), 3) if score is not None else None,
         "status": "model trained successfully"
     }
