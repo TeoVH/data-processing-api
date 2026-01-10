@@ -35,3 +35,7 @@ uvicorn.log
 *.sqlite
 *.sqlite3
 *.db
+
+# ML models
+models/
+*.joblib
